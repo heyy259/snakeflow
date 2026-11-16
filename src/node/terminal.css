@@ -1,0 +1,85 @@
+/* 后台工具终端（每节点），对齐原型 prototype/index.html :885-948。
+   依赖全局 --tf-* 主题变量（src/index.css）；其余样式自包含。 */
+
+/* 原型全局 reset 的局部等价物：终端内一律 border-box、按钮继承字体 */
+.terminal-panel,
+.terminal-panel * { box-sizing: border-box; }
+.terminal-panel button { font-family: inherit; }
+
+.terminal-panel {
+  border-top: 1px solid color-mix(in srgb, var(--tf-border) 60%, transparent);
+  font-size: 10.5px;
+}
+.term-bar {
+  display: flex; align-items: center; gap: 7px; padding: 5px 11px;
+  cursor: pointer; user-select: none; color: var(--tf-node-dim);
+}
+.term-bar:hover { background: color-mix(in srgb, var(--tf-text) 5%, transparent); }
+.term-caret { font-size: 9px; transition: transform .15s ease; }
+.terminal-panel.expanded .term-caret { transform: rotate(90deg); }
+.term-title { color: var(--tf-node-text); font-weight: 600; }
+.term-summary { color: var(--tf-node-dim); }
+.term-wait-badge {
+  margin-left: auto; color: var(--tf-warn); font-weight: 700;
+  animation: dotPulse 1.4s ease-in-out infinite;
+}
+.term-body { display: flex; flex-direction: column; gap: 7px; padding: 0 11px 9px; }
+.term-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.term-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 4px 3px 8px; border: 1px solid var(--tf-border); border-radius: 999px;
+  background: color-mix(in srgb, var(--tf-text) 6%, transparent); color: var(--tf-node-dim);
+  cursor: pointer; font-size: 10.5px; max-width: 100%;
+}
+.term-chip:hover { border-color: var(--tf-border-strong); color: var(--tf-node-text); }
+.term-chip.selected {
+  border-color: var(--tf-accent);
+  background: color-mix(in srgb, var(--tf-accent) 18%, transparent);
+  color: var(--tf-node-text);
+}
+.term-chip .chip-del {
+  border: none; background: transparent; color: var(--tf-danger); cursor: pointer;
+  font-size: 12px; line-height: 1; padding: 0 4px; border-radius: 4px;
+}
+.term-chip .chip-del:hover { background: color-mix(in srgb, var(--tf-danger) 25%, transparent); }
+.term-chip.confirming { border-color: var(--tf-warn); color: var(--tf-warn); cursor: default; }
+.term-chip.confirming button {
+  border: none; border-radius: 4px; cursor: pointer; font-size: 10px; padding: 2px 6px;
+  background: var(--tf-surface-3); color: var(--tf-text);
+}
+.term-chip.confirming .chip-yes { background: var(--tf-danger); color: #1a0a10; }
+.term-wait { color: var(--tf-warn); font-weight: 700; animation: dotPulse 1.4s ease-in-out infinite; }
+.term-empty { color: var(--tf-node-dim); font-style: italic; }
+.term-log {
+  max-height: 120px; overflow: auto; padding: 6px 8px;
+  background: var(--tf-code-bg); border: 1px solid var(--tf-border); border-radius: 6px;
+  font-family: Consolas, "Courier New", Menlo, monospace; font-size: 10.5px; line-height: 1.5;
+}
+.term-line { white-space: pre-wrap; word-break: break-word; }
+.term-line.system { color: var(--tf-text-dim); }
+.term-line.success { color: var(--tf-success); }
+.term-line.error { color: var(--tf-danger); }
+.term-line.warning { color: var(--tf-warn); }
+.term-input { display: flex; align-items: flex-end; gap: 6px; }
+.term-sel {
+  font-size: 10px; color: var(--tf-accent); white-space: nowrap;
+  max-width: 130px; overflow: hidden; text-overflow: ellipsis;
+}
+.term-input textarea {
+  flex: 1; min-width: 0; min-height: 30px; max-height: 72px; resize: vertical;
+  padding: 5px 7px; border: 1px solid var(--tf-border); border-radius: 5px;
+  background: var(--tf-node-bg); color: var(--tf-text); font-family: inherit; font-size: 11px; outline: none;
+}
+.term-input textarea:focus { border-color: var(--tf-accent); }
+.term-input textarea:disabled { opacity: .5; cursor: not-allowed; }
+.term-send {
+  padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 11px;
+  background: var(--tf-accent); color: var(--tf-accent-fg);
+}
+.term-send:hover:not(:disabled) { background: var(--tf-accent-hover); }
+.term-send:disabled { background: var(--tf-surface-3); color: var(--tf-text-dim); cursor: not-allowed; }
+
+@keyframes dotPulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--tf-success) 55%, transparent); opacity: 1; }
+  50% { box-shadow: 0 0 0 4px transparent; opacity: .5; }
+}

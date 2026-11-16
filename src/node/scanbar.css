@@ -1,0 +1,91 @@
+/* ---------------- 节点扫描条（scan.* 对齐，mock 驱动） ---------------- */
+.scan-strip {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--tf-border) 60%, transparent);
+  padding: 4px 11px; font-size: 10.5px; color: var(--tf-node-dim); user-select: none;
+}
+.scan-dot { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; background: #7b7b8c; }
+.scan-dot.state-idle { background: #7b7b8c; }
+.scan-dot.state-scanning { background: var(--tf-success); animation: dotPulse 1.5s ease-in-out infinite; }
+.scan-dot.state-paused { background: var(--tf-warn); }
+.scan-dot.state-error { background: var(--tf-danger); animation: dotPulse 1s ease-in-out infinite; }
+@keyframes dotPulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--tf-success) 55%, transparent); opacity: 1; }
+  50% { box-shadow: 0 0 0 4px transparent; opacity: .5; }
+}
+.scan-state { color: var(--tf-node-text); font-weight: 600; }
+.scan-pos { font-family: Consolas, 'Courier New', Menlo, monospace; }
+.scan-stats { color: var(--tf-node-dim); }
+.scan-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; flex: 1 1 100%; }
+.scan-controls button {
+  padding: 3px 8px; border: 1px solid var(--tf-border); border-radius: 5px;
+  background: var(--tf-surface-2); color: var(--tf-text); font-size: 10.5px;
+  cursor: pointer; font-family: inherit;
+}
+.scan-controls button:hover:not(:disabled):not([aria-disabled='true']) { border-color: var(--tf-accent); color: var(--tf-accent); }
+.scan-controls button:disabled { opacity: .38; cursor: not-allowed; }
+/* Task 4：pending 动作按钮（aria-disabled，非原生 disabled）视觉同禁用，但保留可点击，
+   使点击仍派发 onAction → scanDriver 兜底 toast（原生 disabled 会吞掉 click）。 */
+.scan-controls button[aria-disabled='true'] { opacity: .38; cursor: not-allowed; }
+.scan-setpos { display: inline-flex; align-items: center; gap: 4px; }
+.scan-setpos input {
+  width: 56px; padding: 3px 6px; border: 1px solid var(--tf-border); border-radius: 5px;
+  background: var(--tf-node-bg); color: var(--tf-text); font-size: 10.5px;
+  font-family: inherit; outline: none;
+}
+.scan-setpos input:focus { border-color: var(--tf-accent); }
+/* Phase 5：扫描权限选择（idle 初始档 + paused 切换档）与服务端只读徽标。 */
+.scan-authority { display: inline-flex; align-items: center; gap: 4px; }
+.scan-authority > span { white-space: nowrap; }
+.scan-authority select {
+  max-width: 148px; padding: 3px 6px; border: 1px solid var(--tf-border); border-radius: 5px;
+  background: var(--tf-node-bg); color: var(--tf-text); font-size: 10.5px;
+  font-family: inherit; outline: none; cursor: pointer;
+}
+.scan-authority select:focus { border-color: var(--tf-accent); }
+.scan-authority select:disabled { opacity: .5; cursor: not-allowed; }
+.scan-authority-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 6px; border: 1px solid color-mix(in srgb, var(--tf-accent) 45%, transparent);
+  border-radius: 999px; background: color-mix(in srgb, var(--tf-accent) 12%, transparent);
+  color: var(--tf-node-text); font-family: Consolas, 'Courier New', Menlo, monospace;
+  white-space: nowrap;
+}
+.scan-authority-badge b { color: var(--tf-accent); font-weight: 600; }
+
+.scan-preview {
+  flex: 1 1 100%; font-family: Consolas, 'Courier New', Menlo, monospace;
+  color: var(--tf-node-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* 内容标记：扫描位置色块 + 脉冲 ▶ */
+.md-body [data-line].scan-line {
+  background: color-mix(in srgb, var(--tf-warn) 18%, transparent);
+  box-shadow: inset 3px 0 0 var(--tf-warn);
+  border-radius: 4px;
+}
+.scan-marker { color: var(--tf-warn); font-weight: 800; margin-right: 4px; animation: dotPulse 1s ease-in-out infinite; }
+
+/* 扫描/暂停锁编辑：🔒 徽标 + 琥珀边框；尝试编辑时抖动 */
+.node-lock { flex: 0 0 auto; font-size: 11px; }
+.agent-node.locked { border-color: var(--tf-warn); }
+.agent-node.locked.selected { box-shadow: 0 0 0 1px var(--tf-warn), 0 8px 22px var(--tf-shadow); }
+.agent-node.scan-shake { animation: scanShake .4s ease; }
+@keyframes scanShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+/* 期 14（方案 D8/R-2）：未选中且空闲的节点隐藏「待机/终端」尾巴（CSS 隐藏、不卸载组件，保留组件状态与存在性断言）。 */
+.agent-node.tail-idle .scan-strip,
+.agent-node.tail-idle .terminal-panel { display: none; }
+
+/* R-2.4：新出现 / 新导入节点短暂高亮（fresh 由 App 计时清除）。 */
+.agent-node.node-new { animation: nodeNewPulse 1.8s ease-out 2; }
+@keyframes nodeNewPulse {
+  0% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--tf-accent) 60%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}

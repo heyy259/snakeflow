@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    name: ${{ matrix.os }} · node${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check:boundaries
+      - name: Pure/unit smoke suites
+        run: |
+          node scripts/smoke-se-runtime-unit.mjs
+          node scripts/smoke-se-spawn-spec-unit.mjs
+          node scripts/smoke-path-unit.mjs
+          node scripts/smoke-name-contract-unit.mjs
+          node scripts/smoke-page-state-unit.mjs
+          node scripts/smoke-snippet-data-unit.mjs
+      - run: npm run build
+      - run: npm run build:server
+
+  integration:
+    name: snakeeats integration · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: snakeflow
+      - uses: actions/checkout@v4
+        with:
+          repository: heyy259/snakeeats
+          path: snakeeats
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: snakeflow/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install ./snakeeats
+      - run: npm ci --no-audit --no-fund
+        working-directory: snakeflow
+      - name: SnakeEats integration suite
+        working-directory: snakeflow
+        env:
+          SE_PACKAGE_PATH: ${{ github.workspace }}/snakeeats
+          PYTHONUTF8: '1'
+        run: npm run test:se:require

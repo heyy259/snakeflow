@@ -1,0 +1,126 @@
+{
+  "$schema": "snake-manifest-v1",
+  "id": "manifest#30a83e4d",
+  "namespace": "manifest",
+  "streams": [
+    {
+      "name": "FLOW_EXAMPLE",
+      "description": "",
+      "tags": {
+        "canvas": "false"
+      },
+      "position": {
+        "x": 2320,
+        "y": 784
+      },
+      "id": "s-FLOW_EXAMPLE",
+      "source": {
+        "file_path": "manifest.streams/FLOW_EXAMPLE.md",
+        "encoding": "utf-8"
+      }
+    }
+  ],
+  "tools": {
+    "oc_server": {
+      "name": "oc_server",
+      "description": "OpenCode 宿主生命周期：start/stop/restart/status",
+      "tool_path": "oc_server.py",
+      "brief_description": "",
+      "detailed_description": "",
+      "version": "",
+      "tags": {},
+      "input_schema": {},
+      "insert_template": ""
+    },
+    "oc_host": {
+      "name": "oc_host",
+      "description": "前台长驻宿主：拉起 opencode serve 并泵 SSE 渲染到会话流",
+      "tool_path": "oc_host.py",
+      "brief_description": "",
+      "detailed_description": "",
+      "version": "",
+      "tags": {},
+      "input_schema": {},
+      "insert_template": ""
+    },
+    "oc_prompt": {
+      "name": "oc_prompt",
+      "description": "向会话派发 prompt/command/shell（新建或续聊）",
+      "tool_path": "oc_prompt.py",
+      "brief_description": "",
+      "detailed_description": "",
+      "version": "",
+      "tags": {},
+      "input_schema": {},
+      "insert_template": ""
+    },
+    "oc_abort": {
+      "name": "oc_abort",
+      "description": "打断正在运行的 OpenCode 会话",
+      "tool_path": "oc_abort.py",
+      "brief_description": "",
+      "detailed_description": "",
+      "version": "",
+      "tags": {},
+      "input_schema": {},
+      "insert_template": ""
+    },
+    "oc_view": {
+      "name": "oc_view",
+      "description": "只读会话快照：messages/diff/todo/status/cost",
+      "tool_path": "oc_view.py",
+      "brief_description": "",
+      "detailed_description": "",
+      "version": "",
+      "tags": {},
+      "input_schema": {},
+      "insert_template": ""
+    },
+    "oc_sessions": {
+      "name": "oc_sessions",
+      "description": "会话管理：list/get/delete/fork/summarize/revert 等",
+      "tool_path": "oc_sessions.py",
+      "brief_description": "",
+      "detailed_description": "",
+      "version": "",
+      "tags": {},
+      "input_schema": {},
+      "insert_template": ""
+    },
+    "oc_models": {
+      "name": "oc_models",
+      "description": "发现 OpenCode providers/agents/commands",
+      "tool_path": "oc_models.py",
+      "brief_description": "",
+      "detailed_description": "",
+      "version": "",
+      "tags": {},
+      "input_schema": {},
+      "insert_template": ""
+    },
+    "oc_permission": {
+      "name": "oc_permission",
+      "description": "权限请求：list/reply + 策略与超时",
+      "tool_path": "oc_permission.py",
+      "brief_description": "",
+      "detailed_description": "",
+      "version": "",
+      "tags": {},
+      "input_schema": {},
+      "insert_template": ""
+    }
+  },
+  "system": {
+    "name": "manifest",
+    "graph": {
+      "format_version": "4.0",
+      "edges": [],
+      "positions": {
+        "FLOW_EXAMPLE": {
+          "x": 2320,
+          "y": 784
+        }
+      }
+    }
+  }
+}

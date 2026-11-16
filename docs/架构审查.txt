@@ -1,0 +1,56 @@
+架构审查总结：从根本出发
+一、系统的本质（先对齐心智模型）
+这个项目不是"一个 React Flow 画布应用"，而是三个物理上独立的持久化世界 + 一个编排层:
+世界A: graphs/<名>.se.json + <名>.streams/*.md   ← Node fs（vite 插件），结构/坐标/正文
+世界B: graphs/.workspace.json/.ui.json/...        ← Node fs，工作区指针/偏好/片段/登记表
+世界C: se-systems/<id>/（registry/journal/snapshot）← 外部 Python 进程 snakeeats 拥有，React Flow 只是 WS 客户端
+
+编排层: App.jsx(8135行) + vite.config.js(2449行)  ← 三个世界的同步、竞速、对账全在这里
+所有复杂度的根因：三个世界之间没有统一事务，同步逻辑散落在 8135 行的组件里。 同一份节点内容最多同时存在 5 份副本（React state / nodesRef / storeRef / graphSyncRef 序列化串 / 磁盘+SE 真源），靠手写 useEffect 双写维持一致。
+二、健康度诊断——哪些是好的，绝不能推倒
+审查最重要的发现是分层质量两极分化:
+层	状态	证据
+src/se/ 纯函数域（30 模块）	健康，保持	严格 DAG、零循环依赖、大量零 DOM/零 IO 纯函数、62 个冒烟脚本配套
+src/editor/fold/（7 模块）	干净，可作模板	纯解析（patterns/node/remarkFold）与 React 侧（view/FoldNodeView）分离
+src/document.js/graph.js/tools.js	健康纯函数	双端可用（vite.config 也在 import）
+vite.config.js	巨石后端	2449 行塞进 vite 插件：30 个 HTTP 端点 + WS 代理 + SE 进程全生命周期管理
+src/App.jsx	重度病变	FlowApp 7200 行：45 useState、60 useRef、~120 useCallback、16 个职责簇
+三、根本性问题（按根因聚类）
+P1. 编排层错位（最大负债）: se/ 模块本身干净，但它的装配、订阅、reconcile、内容读取管线全部住在 App.jsx(coordinatorRef/runtimeRef/subscribeSeChanges/91 处 sePool 调用）。se 系统被切成"App 一半 + runtime 一半"。
+P2. 状态无单一真源: 78 处 state/ref；nodes/edges/tools 被 React state + 3 个 ref + storeRef + graphSyncRef 重复持有；模块级单例（pageState/foldState/caretBridge/escStack/sePool）在 React 之外，HMR 时静默清空/残留。
+P3. 持久化无统一层: 13+ 条落盘路径；/api/workspace 和 /api/document/save 在同一 600ms debounce 里串行但无原子性；SE 写入完全独立异步。版本号三套并存（DOC_VERSION=3.0 / format_version=4.0 / SE snapshot=1，迁移脚本写的 version 字段当前 writer 根本不产出）。
+P4. 服务器寄生在构建配置里: vite.config.js 反向 import src/ 和 scripts/；FS 韧性原语被 3 个脚本各自复制（migrate-local-nodes 注释明写"镜像 vite.config.js:220-227"）。
+P5. 重复实现的工具语义: 名字净化/去重后缀 4 套（nameContract/packageImport/paths/uniqueDisplayName 后缀策略互不统一）、errText 4 份、保留 tag 键判定 3 份、CANVAS_TAG_KEY 为不存在的循环依赖复制了一份。
+P6. 打补丁的直接证据——功能性 bug:
+- onSendInput/onStopProcess 死线: actions.js 声明了、App.jsx:7529-7538 赋值了，但 toCanvasGraph 注入 node.data 时漏了这两个 → 终端的"发送输入/停止进程"永远静默 no-op。这是现在就能修的 bug。
+- actions.js 注册表漂移：onRetrySync/onFetchHistoryPage 未声明但动态赋值。
+- 兼容死分支：TOKEN_UNAVAILABLE、alive-unauthed、scanDriver.tick、planEnsure.probeStatus 死参数。
+- 死端点 /api/graphs/sync（前端无调用者）。
+- toCanvasGraph/snapshotOf/normalizeStoredGraph 三份几乎相同的节点归一化；boundOnline 四条件表达式内联 13 次（已有 boundOnlineNow helper 没人用）。
+四、目标架构（建议）
+shared/            ← 双端纯函数：paths/document/graph(纯函数部分)/nameContract/tagOps...
+server/            ← 从 vite.config.js 拆出
+  ├ se/proxy.js + lifecycle.js   (安全闸门、spawn 状态机、WS 扇入)
+  ├ graphs/api.js                (图谱 CRUD、document/save)
+  ├ fs/api.js + dialog.js + resilient-fs.js  (OneDrive 重试原语上提，scripts 复用)
+  └ store.js                     (workspace/history/frecency/snippets/configs)
+vite.config.js     ← 缩回 ~15 行：plugins:[react(), devServerPlugin()]
+
+src/
+  ├ domain/        ← se/ 保持现状，仅合并薄模块+收敛重复工具
+  ├ app/
+  │   ├ store.js         ← zustand/reducer：tabs/nodes/edges/tools 单一真源
+  │   ├ seOrchestrator.js← 从 App 下沉：runtime+reconcile+订阅+内容管线
+  │   └ persistence.js   ← 每域唯一写出入口
+  ├ features/      ← canvas/ dialogs/ textView/ snippets 各自 hook+组件
+  └ ui/            ← sidebar/node/editor 组件（半自治面板模式推广）
+五、改造决策清单（按风险/收益排序）
+#	决策	依赖面	影响面	风险	收益
+D0	修死线 bug：补 onSendInput/onStopProcess 注入 + 死分支清理	actions.js, toCanvasGraph, AgentNode	仅终端功能	极低	立即恢复功能+验证审查精度
+D1	se/ 局部重组：合并 register+configLoad→manifest、persistGuard→streams、命名逻辑归并 nameContract、抽 util 收敛重复	se 内部 DAG 无环，移动安全	21 个 App import + 5 个面板 import	低（纯移动，有 62 个冒烟脚本兜底）	消除 4 套命名/3 套保留键
+D2	vite.config.js → server/ + shared/	30 端点行号已全映射；注意插件顺序（seApi 必须先于 graphsApi 防 404 吞掉）	scripts/ 改 import 共享 FS 原语	中（机械搬运，端点行为逐字节保持）	vite.config 2449→15 行
+D3	SE 编排下沉 seOrchestrator.js（coordinatorRef+runtimeRef+subscribeSeChanges+内容读取管线）	App.jsx:1195/1526/1987/2144/3850 一带 ~2000 行	AgentNode 经 data 回调间接受益	中高（牵动双通道订阅 seam）	App 减重约 1/4，se 闭环
+D4	统一状态层（zustand 或 reducer）：nodes/edges/tools/storeRef/graphSyncRef 收敛	需保持与 React Flow useNodesState 的集成模式	全部编辑 handler	高	根除 5 副本手写双写
+D5	持久化层统一 + 版本号收敛	13 条落盘路径	保存/导入/导出/改名	高	原子性、可推理
+D6	UI 拆分：DialogHost/CanvasArea 提取、AgentNode 回调注册表类型化、统一 Dialog 内容壳、pickPath/fmtSize 收敛	render 段 7548-8135	全部组件	中	最后做，依赖 D3/D4
+建议执行顺序：D0 → D1 → D2 → D3 →（停，验证）→ D4/D5（需你参与决策）→ D6。 D4 和 D5 改动面最大且互相关联，值得单独一轮设计。

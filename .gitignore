@@ -1,0 +1,94 @@
+# ---- 依赖 ----
+node_modules/
+
+# ---- 构建产物 ----
+dist/
+*.tsbuildinfo
+
+# ---- 运行日志 ----
+*.log
+dev*.log
+
+# ---- 工具 / 浏览器自动化产物 ----
+.playwright-mcp/
+.sisyphus/
+
+# ---- SE 系统运行数据（vite spawn 的 storage/registry/journal，运行时产物） ----
+se-systems/
+
+# ---- 本地环境与密钥 ----
+.env
+.env.*
+*.local
+*.pem
+# 机器本地 SE 配置（放 %APPDATA%\reactflow\ 或用 SE_CONFIG 指向；示例见 se.config.example.json）
+se.config.local.json
+se.config.json
+
+# ---- 编辑器 / 系统 ----
+.vscode/*
+!.vscode/extensions.json
+.idea/
+Thumbs.db
+Desktop.ini
+
+# ---- 只读调研资料 ----
+# 第三方仓库整包副本（体积大且自带 .git），不入库；
+# 保留 docs_raw/ 文档正文、调研报告.md、调研清单.json
+only_read/*/
+!only_read/docs_raw/
+
+# ---- 图谱运行时/测试产物（不入库）----
+graphs/图 *.json
+graphs/__*
+graphs/冒烟*.json
+graphs/edges.json
+# 冒烟 / e2e 测试产物（scripts/smoke-*.mjs 运行时落盘）
+graphs/smoke-*
+graphs/e2e-*
+graphs/promote-*
+graphs/待同步*
+graphs/edgealign-*
+graphs/tags-escape-*
+graphs/tmp-*
+# 固定名测试图表（smoke-se-streams / smoke-se-tags / smoke-se-edges / e2e-se-autostart）
+graphs/streams-s*
+graphs/tags-s*
+graphs/edges.se.json
+graphs/edges.streams/
+graphs/autospawn.se.json
+graphs/同名*
+# 备份与机器特定状态
+graphs/*.bak
+graphs/*-bak
+graphs/.migration-backup-*/
+graphs/.configs.smoke-bak.json
+graphs/.workspace-*.json
+graphs/.workspace.json
+graphs/.ui.json
+graphs/.configs.json
+graphs/.frecency.json
+graphs/history.json
+graphs/*.smk-bak
+graphs/*.autospawn-bak
+graphs/*.smoke-bak
+# 用户手动复制的重复图谱（「副本」）
+graphs/* 副本*
+# 本地 agent 运行态
+.omo/
+# 嵌套测试产物 / 原子写临时文件 / 机器特定快照
+graphs/graphs/
+graphs/*.tmp-*
+graphs/*-DESKTOP-*
+
+# ---- 开源发行与本地运行 ----
+.DS_Store
+.ruff_cache/
+data/
+runtime/
+se-storage/
+logs/
+server.mjs
+release/
+.playwright-mcp/
+docs/archive/

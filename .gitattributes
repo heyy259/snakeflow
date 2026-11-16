@@ -1,0 +1,27 @@
+* text=auto
+
+# Windows launchers must stay CRLF; POSIX launchers must stay LF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.command text eol=lf
+*.sh text eol=lf
+
+# Source and docs
+*.js text
+*.mjs text
+*.jsx text
+*.json text
+*.md text
+*.yml text
+*.yaml text
+*.toml text
+
+# Binary artifacts
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.whl binary
+*.zip binary
