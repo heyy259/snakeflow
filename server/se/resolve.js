@@ -13,14 +13,23 @@ import { resolveSeRuntime } from './runtime/seRuntime.js';
 import { validateSystemId } from '../../shared/nameContract.js';
 import { getAppPaths } from '../paths.js';
 
-export async function resolveSeRuntimeForServer() {
+let runtimeCache = null;
+
+export async function resolveSeRuntimeForServer({ fresh = false } = {}) {
+  if (!fresh && runtimeCache && Date.now() - runtimeCache.at < 60000) return runtimeCache.value;
   const paths = getAppPaths();
   const result = await resolveSeRuntime({
     projectRoot: paths.appRoot,
     dataRoot: paths.dataRoot,
     configFile: paths.mode === 'installed' ? paths.configFile : undefined,
   });
-  return { ...result, appRoot: paths.appRoot, dataRoot: paths.dataRoot };
+  const value = { ...result, appRoot: paths.appRoot, dataRoot: paths.dataRoot };
+  runtimeCache = { at: Date.now(), value };
+  return value;
+}
+
+export function clearSeRuntimeCache() {
+  runtimeCache = null;
 }
 
 export const sanitizeSeSystemId = validateSystemId;

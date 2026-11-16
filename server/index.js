@@ -7,6 +7,7 @@ import { createAppPaths, setAppPaths, readAppConfig } from './paths.js';
 import { sweepSeRuntime } from './se/cleanup.js';
 import { createSeSupervisor } from './se/supervisor.js';
 import { createSecurityGate } from './security.js';
+import { clearSeRuntimeCache } from './se/resolve.js';
 
 export function createAppRuntime(options = {}) {
   const initialPaths = createAppPaths(options);
@@ -19,6 +20,7 @@ export function createAppRuntime(options = {}) {
     ? createAppPaths({ ...options, mode, dataRoot })
     : initialPaths;
   setAppPaths(paths);
+  clearSeRuntimeCache();
   migrateLegacyLayout(paths);
   if (paths.mode !== 'installed') migrateLegacyFlows();
   if (process.env.SE_CLEANUP !== '0') {

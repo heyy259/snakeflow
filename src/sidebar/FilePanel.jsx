@@ -24,7 +24,7 @@ const isFileRow = (row) => !!row && row.type !== 'dir' && row.role !== 'drive' &
 const isCodeRow = (row) => isFileRow(row) && CODE_EXT.test(row.path);
 const isDocRow = (row) => isFileRow(row) && !CODE_EXT.test(row.path) && !BINARY_EXT.test(row.path);
 // 绝对路径判定：盘符（C:\ / C:/）或 UNC（\\server\share）
-const isAbsPath = (s) => /^(?:[a-zA-Z]:[\\/]|\\\\)/.test(String(s || '').trim());
+const isAbsPath = (s) => /^(?:[a-zA-Z]:[\\/]|\\\\|\/)/.test(String(s || '').trim());
 const byScore = (a, b) => (Number(b.score) || 0) - (Number(a.score) || 0);
 
 const reduceMotion = () =>

@@ -60,6 +60,21 @@ const seSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 export function parseStorageRootBusy(text) {
   const s = String(text == null ? '' : text);
+  const structured = s.match(/^SNAKEEATS_ERROR\s+(\{.*\})$/m);
+  if (structured) {
+    try {
+      const payload = JSON.parse(structured[1]);
+      if (payload && payload.code === 'storage-root-busy') {
+        const pid = Number(payload.pid);
+        return {
+          holderPid: Number.isInteger(pid) && pid > 0 ? pid : null,
+          root: String(payload.root || '').trim(),
+          lock: String(payload.lock || '').trim(),
+        };
+      }
+    } catch {
+    }
+  }
   const m = s.match(
     /storage root already owned by pid\s+(\d+|unknown):\s*([\s\S]*?)\s*\(lock=([\s\S]*?)\)/
   );
