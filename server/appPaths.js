@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveSeConfigPath } from './se/runtime/seRuntime.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -52,6 +53,16 @@ export function createAppPaths(options = {}) {
     logsDir: path.join(dataRoot, 'logs'),
     configFile: path.join(configRoot, 'app.config.json'),
   };
+}
+
+export function readAppConfig({ env = process.env, platform = process.platform, configFile } = {}) {
+  const filePath = resolveSeConfigPath({ env, platform, configFile });
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 let current = null;

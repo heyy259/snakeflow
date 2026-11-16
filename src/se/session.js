@@ -1,12 +1,19 @@
 let secret = '';
 let inflight = null;
 
+export function clearSessionSecret() {
+  secret = '';
+}
+
 export async function getSessionSecret() {
   if (secret) return secret;
   if (!inflight) {
     inflight = fetch('/api/session')
       .then(async (res) => {
-        if (!res.ok) throw new Error(`session bootstrap failed: HTTP ${res.status}`);
+        if (!res.ok) {
+          clearSessionSecret();
+          throw new Error(`session bootstrap failed: HTTP ${res.status}`);
+        }
         const data = await res.json();
         secret = String(data && data.session ? data.session : '');
         return secret;
@@ -29,6 +36,8 @@ export function installApiSession() {
       headers.set('X-RF-Session', session);
       init = { ...init, headers };
     }
-    return original(input, init);
+    const response = await original(input, init);
+    if (response.status === 403) clearSessionSecret();
+    return response;
   };
 }

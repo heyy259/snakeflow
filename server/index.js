@@ -3,13 +3,21 @@ import { migrateLegacyFlows } from './store.js';
 import { migrateLegacyLayout } from './migrate.js';
 import { seApi } from './se/api.js';
 import { graphsApi } from './graphsApi.js';
-import { createAppPaths, setAppPaths } from './paths.js';
+import { createAppPaths, setAppPaths, readAppConfig } from './paths.js';
 import { sweepSeRuntime } from './se/cleanup.js';
 import { createSeSupervisor } from './se/supervisor.js';
 import { createSecurityGate } from './security.js';
 
 export function createAppRuntime(options = {}) {
-  const paths = createAppPaths(options);
+  const initialPaths = createAppPaths(options);
+  const config = options.config || readAppConfig({
+    configFile: options.configFile || (initialPaths.mode === 'installed' ? initialPaths.configFile : undefined),
+  });
+  const mode = options.mode || (config.portable === true ? 'legacy' : config.portable === false ? 'installed' : undefined);
+  const dataRoot = options.dataRoot || (config.dataRoot && config.dataRoot !== 'auto' ? config.dataRoot : undefined);
+  const paths = mode !== initialPaths.mode || dataRoot !== initialPaths.dataRoot
+    ? createAppPaths({ ...options, mode, dataRoot })
+    : initialPaths;
   setAppPaths(paths);
   migrateLegacyLayout(paths);
   if (paths.mode !== 'installed') migrateLegacyFlows();
@@ -27,7 +35,9 @@ export function createAppRuntime(options = {}) {
     });
   }
   const supervisor = createSeSupervisor({ paths });
-  const security = options.security || createSecurityGate({ port: options.port || 5173 });
+  const security = options.security || createSecurityGate({
+    port: options.port || (config.server && config.server.port) || 5173,
+  });
   return {
     paths,
     supervisor,

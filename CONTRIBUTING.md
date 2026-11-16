@@ -59,6 +59,12 @@ Every behavior change needs a regression test. For boundary changes, also run
 `npm run check:boundaries` and `npm run test:parity`. Do not delete failing tests
 to make a change pass.
 
+`se-test-helper` injects `RF_ALLOW_INSECURE_TEST=1` and a deterministic
+`RF_SESSION_SECRET` into spawned Vite processes so the legacy suite does not
+need to bootstrap a session for every request. That flag is **test-only** and
+must never be set in production. Security behavior is covered separately by
+`npm run test:parity` and by the secure standalone/WS assertions.
+
 ## Data safety
 
 Never add automatic deletion of `se-storage/` or workspace documents. Runtime

@@ -5,6 +5,7 @@ import { listDrives } from './util.js';
 import {
   createAppPaths,
   getAppPaths,
+  readAppConfig,
   setAppPaths as setCurrentAppPaths,
   resolveAppRoot,
 } from './appPaths.js';
@@ -47,7 +48,7 @@ export function setAppPaths(paths) {
   return current;
 }
 
-export { createAppPaths, getAppPaths };
+export { createAppPaths, getAppPaths, readAppConfig };
 
 export const STORE_WHITELIST = new Set(['snippets', 'ui', 'configs']);
 export { EXEC_EXTS } from './platform/paths.js';

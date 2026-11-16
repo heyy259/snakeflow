@@ -10,7 +10,7 @@
 //   `method` = 主题字面量，`params` 含 `{subscription_id, topic, ...data}`；
 // - 错误帧 `error.data` 强制五要素 `{kind, entity, expected, actual, hint}`。
 
-import { getSessionSecret } from './session.js';
+import { getSessionSecret, clearSessionSecret } from './session.js';
 
 /** 请求缺省超时（毫秒）。 */
 const REQUEST_TIMEOUT_MS = 30000;
@@ -204,6 +204,7 @@ export class SEClient {
       if (this.closed) return;
       // D：4401（token 不可用）不再是终态。存活但无 token 的残留由 Node 侧回收重拉后会
       // 提供新 token，故一律按离线走退避重连，由 ensure 流程自愈（回收+全新拉起）。
+      if (ev.code === 4401) clearSessionSecret();
       this._setStatus(SE_STATUS.OFFLINE);
       this._scheduleReconnect();
     };
