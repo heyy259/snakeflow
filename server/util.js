@@ -195,7 +195,7 @@ export function findListeningProcess(port) {
         }
       }
     } else {
-      const out = execFileSync('lsof', ['-ti', `tcp:${n}`], {
+      const out = execFileSync('lsof', ['-ti', `tcp:${n}`, '-sTCP:LISTEN'], {
         encoding: 'utf-8',
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'ignore'],
