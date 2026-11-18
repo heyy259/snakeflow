@@ -38,7 +38,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # macos-latest 当前是 arm64，长时间集成作业排队经常超过 15 分钟；
+        # 固定 macOS 14 标准 runner，保证公开 CI 能稳定得到 Intel macOS 覆盖。
+        os: [ubuntu-latest, windows-latest, macos-14]
     steps:
       - uses: actions/checkout@v4
         with:
