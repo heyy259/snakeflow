@@ -65,7 +65,7 @@ function restore() {
   }
 }
 
-const server = spawn('npx.cmd', ['vite', '--port', String(PORT), '--strictPort'], { cwd: process.cwd(), stdio: 'ignore', shell: true, env: await seEnv() });
+const server = spawn((process.platform === 'win32' ? 'npx.cmd' : 'npx'), ['vite', '--port', String(PORT), '--strictPort'], { cwd: process.cwd(), stdio: 'ignore', shell: process.platform === 'win32', env: await seEnv() });
 let browser;
 try {
   await waitForServer(BASE);
@@ -272,7 +272,7 @@ try {
   check('冒烟执行', false, String((err && err.message) || err));
 } finally {
   if (browser) await browser.close();
-  try { spawnSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* 尽力而为 */ }
+  if (process.platform === 'win32') { try { spawnSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* ignore */ } } else { try { spawnSync('pkill', ['-TERM', '-P', String(server.pid)], { stdio: 'ignore' }); } catch { /* ignore */ } try { server.kill('SIGTERM'); } catch { /* ignore */ } }
   cleanupSeSystem(SID);
   restore();
   // 测试 tab 在真实 graphs/ 下生成的配置 / .streams 目录一并清掉，避免逐轮堆积。

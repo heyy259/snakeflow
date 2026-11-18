@@ -26,6 +26,7 @@ import {
   purgeTestTabsFromWorkspace,
   workspaceSystemIds,
 } from './se-ui-helper.mjs';
+import { pythonPidsFor } from './se-test-helper.mjs';
 
 const PORT = 5201;
 const BASE = `http://localhost:${PORT}`;
@@ -46,24 +47,6 @@ function waitForServer(url, timeout = 20000) {
     };
     tick();
   });
-}
-
-/** 找出承载 SID 的 python（SE）进程 pid（cmdline 含 --storage .../<SID>）。 */
-function sePidsFor(sid) {
-  try {
-    const out = execFileSync(
-      'powershell.exe',
-      [
-        '-NoProfile',
-        '-Command',
-        `Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like '*${sid}*' } | ForEach-Object { $_.ProcessId }`,
-      ],
-      { encoding: 'utf-8', windowsHide: true, timeout: 20000 }
-    );
-    return String(out || '').trim().split(/\s+/).filter(Boolean);
-  } catch (err) {
-    return [];
-  }
 }
 
 const results = [];
@@ -122,7 +105,7 @@ const SEED_WORKSPACE = {
 fs.mkdirSync(path.dirname(BACKUP_FILES[0]), { recursive: true });
 fs.writeFileSync(BACKUP_FILES[0], JSON.stringify(SEED_WORKSPACE));
 
-const server = spawn('npx.cmd', ['vite', '--port', String(PORT), '--strictPort'], { cwd: process.cwd(), stdio: 'ignore', shell: true, env: await seEnv() });
+const server = spawn((process.platform === 'win32' ? 'npx.cmd' : 'npx'), ['vite', '--port', String(PORT), '--strictPort'], { cwd: process.cwd(), stdio: 'ignore', shell: process.platform === 'win32', env: await seEnv() });
 
 let browser;
 let context;
@@ -194,9 +177,15 @@ try {
   /** 制造可观测离线窗口：拦截自愈 spawn + 杀 SE 进程。 */
   const forceOffline = async () => {
     await page.route('**/api/se/spawn', (r) => r.abort());
-    const pids = sePidsFor(SID);
+    const pids = await pythonPidsFor(SID);
     for (const pid of pids) {
-      try { spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' }); } catch (e) { /* 尽力而为 */ }
+      try {
+        if (process.platform === 'win32') {
+          spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
+        } else {
+          process.kill(pid, 'SIGTERM');
+        }
+      } catch { /* 尽力而为 */ }
     }
     return pids.length;
   };
@@ -294,7 +283,7 @@ try {
   check('冒烟执行', false, String((err && err.message) || err));
 } finally {
   if (browser) await browser.close();
-  try { spawnSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* 尽力而为 */ }
+  if (process.platform === 'win32') { try { spawnSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* ignore */ } } else { try { spawnSync('pkill', ['-TERM', '-P', String(server.pid)], { stdio: 'ignore' }); } catch { /* ignore */ } try { server.kill('SIGTERM'); } catch { /* ignore */ } }
   cleanupSeSystem(SID);
   // seed 工作区里还有运行时派生的 SE（若存在）一并回收。
   for (const id of workspaceSystemIds(BACKUP_FILES[0])) cleanupSeSystem(id);

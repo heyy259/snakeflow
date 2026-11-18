@@ -60,7 +60,16 @@ let watchdog = null;
 function cleanup() {
   if (watchdog) clearTimeout(watchdog);
   try { if (browser) browser.close(); } catch { /* ignore */ }
-  try { if (server && server.pid) spawnSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* ignore */ }
+  try {
+    if (server && server.pid) {
+      if (process.platform === 'win32') {
+        spawnSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' });
+      } else {
+        spawnSync('pkill', ['-TERM', '-P', String(server.pid)], { stdio: 'ignore' });
+        server.kill('SIGTERM');
+      }
+    }
+  } catch { /* ignore */ }
   // 还原工作区（hadWorkspace 判定，绝不误删真实文件）。
   try {
     if (hadWorkspace && fs.existsSync(WS_BAK)) fs.copyFileSync(WS_BAK, WS);
@@ -108,10 +117,10 @@ try {
     'utf-8'
   );
 
-  server = spawn('npx.cmd', ['vite', '--port', String(PORT), '--strictPort'], {
+  server = spawn((process.platform === 'win32' ? 'npx.cmd' : 'npx'), ['vite', '--port', String(PORT), '--strictPort'], {
     cwd: ROOT,
     stdio: 'ignore',
-    shell: true,
+    shell: process.platform === 'win32',
     env: await seEnv(),
   });
   watchdog = setTimeout(() => {

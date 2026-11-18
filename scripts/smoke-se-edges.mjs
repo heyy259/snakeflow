@@ -286,7 +286,11 @@ async function spawnSe() {
 function killTree(child) {
   if (!child || child.exitCode != null || child.pid == null) return;
   try {
-    spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+    if (process.platform === 'win32') {
+      spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+    } else {
+      child.kill('SIGTERM');
+    }
   } catch (err) {
     /* 尽力而为 */
   }

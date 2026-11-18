@@ -103,10 +103,10 @@ fs.writeFileSync(
   'utf-8'
 );
 
-const server = spawn('npx.cmd', ['vite', '--port', String(PORT), '--strictPort'], {
+const server = spawn((process.platform === 'win32' ? 'npx.cmd' : 'npx'), ['vite', '--port', String(PORT), '--strictPort'], {
   cwd: ROOT,
   stdio: 'ignore',
-  shell: true,
+  shell: process.platform === 'win32',
   env: await seEnv(),
 });
 let browser;
@@ -243,7 +243,7 @@ try {
   check('执行异常', false, err && (err.stack || err.message));
 } finally {
   try { if (browser) await browser.close(); } catch { /* ignore */ }
-  try { spawnSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* ignore */ }
+  if (process.platform === 'win32') { try { spawnSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* ignore */ } } else { try { spawnSync('pkill', ['-TERM', '-P', String(server.pid)], { stdio: 'ignore' }); } catch { /* ignore */ } try { server.kill('SIGTERM'); } catch { /* ignore */ } }
   for (const sid of new Set(systemIds)) cleanupSeSystem(sid);
   restore();
   try { fs.rmSync(PKG_DIR, { recursive: true, force: true }); } catch { /* ignore */ }

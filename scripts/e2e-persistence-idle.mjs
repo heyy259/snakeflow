@@ -174,7 +174,12 @@ async function finish(explicitCode) {
   try { if (browser) await browser.close(); } catch { /* best effort */ }
   try {
     if (server && server.pid) {
-      spawnSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' });
+      if (process.platform === 'win32') {
+        spawnSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' });
+      } else {
+        spawnSync('pkill', ['-TERM', '-P', String(server.pid)], { stdio: 'ignore' });
+        server.kill('SIGTERM');
+      }
     }
   } catch { /* best effort */ }
   restoreBackups();
@@ -214,10 +219,10 @@ try {
   };
   fs.writeFileSync(PROBE_CFG, JSON.stringify(probeDoc, null, 2), 'utf-8');
 
-  server = spawn('npx.cmd', ['vite', '--port', String(PORT), '--strictPort'], {
+  server = spawn((process.platform === 'win32' ? 'npx.cmd' : 'npx'), ['vite', '--port', String(PORT), '--strictPort'], {
     cwd: ROOT,
     stdio: 'ignore',
-    shell: true,
+    shell: process.platform === 'win32',
   });
   watchdog = setTimeout(() => {
     check('watchdog: forced exit after timeout', false);

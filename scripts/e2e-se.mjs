@@ -173,32 +173,48 @@ function waitCloseCode(ws, timeoutMs = 10000) {
 
 /** 兜底：按 storage id 找 python 进程并 taskkill /T /F（vite 意外死时防孤儿）。 */
 function killPythonByStorage(id) {
-  if (process.platform !== 'win32') return [];
   let pids = [];
   try {
-    const out = execFileSync(
-      'powershell.exe',
-      [
-        '-NoProfile',
-        '-Command',
-        `Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like '*${id}*' } | ForEach-Object { $_.ProcessId }`,
-      ],
-      { encoding: 'utf-8', windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'], timeout: 20000 }
-    );
-    pids = String(out)
-      .split(/\r?\n/)
-      .map((s) => parseInt(s.trim(), 10))
-      .filter((n) => Number.isInteger(n) && n > 0);
+    if (process.platform === 'win32') {
+      const out = execFileSync(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-Command',
+          `Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like '*${id}*' } | ForEach-Object { $_.ProcessId }`,
+        ],
+        { encoding: 'utf-8', windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'], timeout: 20000 }
+      );
+      pids = String(out)
+        .split(/\r?\n/)
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => Number.isInteger(n) && n > 0);
+    } else {
+      const out = execFileSync('ps', ['-eo', 'pid=,args='], {
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: 20000,
+      });
+      for (const line of String(out).split(/\r?\n/)) {
+        if (!/python/i.test(line) || !line.includes(id)) continue;
+        const match = line.trim().match(/^(\d+)\s+/);
+        if (match) pids.push(Number(match[1]));
+      }
+    }
   } catch (err) {
     return [];
   }
   for (const pid of pids) {
     try {
-      execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
-        stdio: 'ignore',
-        windowsHide: true,
-        timeout: 15000,
-      });
+      if (process.platform === 'win32') {
+        execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
+          stdio: 'ignore',
+          windowsHide: true,
+          timeout: 15000,
+        });
+      } else {
+        process.kill(pid, 'SIGTERM');
+      }
     } catch (err) {
       /* 已退出或权限不足：尽力而为 */
     }
@@ -251,7 +267,7 @@ function emergencyCleanup(exitCode, why) {
   for (const id of STORAGE_IDS) killPythonByStorage(id);
   for (const id of STORAGE_IDS) {
     try {
-      spawnSync('cmd', ['/c', 'rmdir', '/s', '/q', path.join(SE_SYSTEMS_DIR, id)], { stdio: 'ignore' });
+      fs.rmSync(path.join(SE_SYSTEMS_DIR, id), { recursive: true, force: true });
     } catch (err) {
       /* 忽略 */
     }

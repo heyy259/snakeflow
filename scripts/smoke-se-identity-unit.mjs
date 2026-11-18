@@ -80,6 +80,8 @@ try {
     fs.mkdirSync(path.join(root, 'casea'));
     const ambiguous = resolveStorageId('caseA', root);
     check('Linux 精确优先（两个大小写目录并存）', ambiguous.kind === 'exact' && ambiguous.dirName === 'caseA');
+    fs.mkdirSync(path.join(root, 'caseAa'));
+    fs.mkdirSync(path.join(root, 'caseaA'));
     const ambiguous2 = resolveStorageId('caseaa', root);
     check('Linux 无精确且多 casefold 命中 → ambiguous', ambiguous2.kind === 'ambiguous' && ambiguous2.dirNames.length === 2, JSON.stringify(ambiguous2));
   }

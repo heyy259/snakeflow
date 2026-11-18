@@ -168,14 +168,30 @@ export async function waitRegistryPortOrAny({ id, timeoutMs = 25000, intervalMs 
   return null;
 }
 
-/** 杀整棵进程树（Windows taskkill /T /F）；尽力而为，绝不抛出。 */
+/** 杀整棵进程树；尽力而为，绝不抛出。 */
 export function killTree(child) {
   if (!child || child.exitCode != null || child.pid == null) return;
   try {
-    spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+    if (process.platform === 'win32') {
+      spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+    } else {
+      child.kill('SIGTERM');
+      spawnSync('pkill', ['-TERM', '-P', String(child.pid)], { stdio: 'ignore' });
+    }
   } catch (err) {
     /* 尽力而为 */
   }
+}
+
+const VITE_BIN = path.join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js');
+
+/** 直接以 Node 启动 Vite，避免 Windows npx.cmd 与 POSIX npx 的分叉。 */
+export function spawnVite({ port, env = process.env } = {}) {
+  return spawn(
+    process.execPath,
+    [VITE_BIN, '--port', String(port), '--strictPort'],
+    { cwd: ROOT, stdio: 'ignore', env, windowsHide: true }
+  );
 }
 
 /** 端口是否已有监听（防上一次 vite 残留导致 strictPort 假失败）。 */
@@ -414,9 +430,29 @@ export async function closeViteGracefully(child, fallbackMs = 12000) {
   });
 }
 
-/** 枚举 python.exe 的命令行（用于孤儿核对）；PowerShell CIM，失败返回 []。 */
+/** 枚举 Python 进程命令行（用于孤儿核对）；失败返回 []。 */
 export function pythonProcesses() {
   return new Promise((resolve) => {
+    if (process.platform !== 'win32') {
+      execFile(
+        'ps',
+        ['-eo', 'args='],
+        { encoding: 'utf-8', timeout: 20000 },
+        (err, stdout) => {
+          if (err) {
+            resolve([]);
+            return;
+          }
+          resolve(
+            String(stdout || '')
+              .split(/\r?\n/)
+              .map((line) => line.trim())
+              .filter((line) => /python/i.test(line))
+          );
+        }
+      );
+      return;
+    }
     execFile(
       'powershell.exe',
       [
@@ -437,6 +473,54 @@ export function pythonProcesses() {
         } catch (parseErr) {
           resolve([]);
         }
+      }
+    );
+  });
+}
+
+/** 返回命令行中包含 system_id 的 Python 进程 PID。 */
+export function pythonPidsFor(systemId) {
+  const sid = String(systemId || '');
+  return new Promise((resolve) => {
+    if (!sid) {
+      resolve([]);
+      return;
+    }
+    if (process.platform === 'win32') {
+      execFile(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-Command',
+          `Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like '*${sid}*' } | ForEach-Object { $_.ProcessId }`,
+        ],
+        { encoding: 'utf-8', windowsHide: true, timeout: 20000 },
+        (err, stdout) => {
+          if (err) {
+            resolve([]);
+            return;
+          }
+          resolve(String(stdout || '').trim().split(/\s+/).filter(Boolean).map(Number));
+        }
+      );
+      return;
+    }
+    execFile(
+      'ps',
+      ['-eo', 'pid=,args='],
+      { encoding: 'utf-8', timeout: 20000 },
+      (err, stdout) => {
+        if (err) {
+          resolve([]);
+          return;
+        }
+        const pids = [];
+        for (const line of String(stdout || '').split(/\r?\n/)) {
+          if (!/python/i.test(line) || !line.includes(sid)) continue;
+          const match = line.trim().match(/^(\d+)\s+/);
+          if (match) pids.push(Number(match[1]));
+        }
+        resolve(pids);
       }
     );
   });
