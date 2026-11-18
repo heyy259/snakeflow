@@ -115,12 +115,26 @@ try {
   context = await browser.newContext({ viewport: { width: 1600, height: 950 } });
   const page = await context.newPage();
   const consoleErrors = [];
+  const consoleArgTasks = [];
   page.on('pageerror', (e) => consoleErrors.push('PAGEERROR: ' + e.message));
   page.on('console', (m) => {
     const t = m.text();
     // 离线期间 WS 断连的错误日志是预期噪声，不计入「控制台无错误」。
     if (m.type() === 'error' && !/Failed to load resource/.test(t) && !/WebSocket|ws:\/\//i.test(t)) {
-      consoleErrors.push(t);
+      const index = consoleErrors.push(t) - 1;
+      // Playwright 的 text() 会保留 %s 占位符；把参数异步补进错误明细，避免把
+      // React 的重复 key 警告截成无法定位来源的通用文案。
+      consoleArgTasks.push(
+        Promise.all(
+          m.args().map((arg) =>
+            arg.jsonValue().catch(() => arg.toString()).catch(() => '<unreadable>')
+          )
+        )
+          .then((args) => {
+            if (args.length) consoleErrors[index] += ` | args=${JSON.stringify(args)}`;
+          })
+          .catch(() => {})
+      );
     }
   });
 
@@ -277,6 +291,7 @@ try {
     check('④ 重连后离线新增节点也被提升（s-新节点）', await hasNode('s-新节点', 45000));
   }
 
+  await Promise.all(consoleArgTasks);
   check('控制台无错误', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' || '));
   await page.screenshot({ path: '.sisyphus/smoke-promote-node.png' });
 } catch (err) {
