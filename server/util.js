@@ -127,7 +127,7 @@ export function getProcessStartTime(pid) {
   if (!Number.isInteger(n) || n <= 0) return null;
   try {
     if (process.platform === 'win32') {
-      const script = `$p = Get-CimInstance Win32_Process -Filter "ProcessId=${n}" -ErrorAction Stop; if ($p -and $p.CreationDate) { $p.CreationDate.ToUniversalTime().ToString("o") }`;
+      const script = `$p = Get-CimInstance Win32_Process -Filter "ProcessId=${n}" -ErrorAction SilentlyContinue; if (-not $p) { $p = Get-Process -Id ${n} -ErrorAction SilentlyContinue }; $t = if ($p -and $p.CreationDate) { $p.CreationDate } elseif ($p -and $p.StartTime) { $p.StartTime }; if ($t) { $t.ToUniversalTime().ToString("o") }`;
       const out = String(
         execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
           encoding: 'utf-8',
