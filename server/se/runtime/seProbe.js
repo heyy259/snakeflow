@@ -1,13 +1,27 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { isInside } from '../../../shared/paths.js';
 import { buildSeEnv } from './seSpawnSpec.js';
 
 export const SE_PROBE_TIMEOUT_MS = 15000;
 
+function canonicalPath(value) {
+  const absolute = path.resolve(String(value));
+  try {
+    return fs.realpathSync.native(absolute);
+  } catch {
+    return absolute;
+  }
+}
+
 export function isPathInside(parent, child) {
   if (!parent || !child) return false;
-  return isInside(path.resolve(parent), path.resolve(child));
+  // macOS 的 /var 等系统别名会由 Python 返回 /private/var；先解析真实路径，
+  // 否则同一目录在探测结果里会被误判为包外影子导入。
+  const p = canonicalPath(parent);
+  const c = canonicalPath(child);
+  const rel = path.relative(p, c);
+  return !!rel && rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
 }
 
 const PROBE_IMPORT_CODE =
@@ -101,13 +115,13 @@ export async function probeSeRuntime(descriptor, { baseEnv = process.env, timeou
     if (!moduleFile || moduleFile === 'None' || !path.isAbsolute(moduleFile)) {
       return { ok: false, reason: `import snakeeats 返回了无效模块路径：${moduleFile || '(空)'}` };
     }
-    if (mode === 'dir' && !isInside(packageParent, moduleFile)) {
+    if (mode === 'dir' && !isPathInside(packageParent, moduleFile)) {
       return {
         ok: false,
         reason: `import snakeeats 命中 ${moduleFile}，不在 ${packageParent} 下（疑似 PYTHONPATH/site-packages shadow）`,
       };
     }
-    if (mode === 'pip' && descriptor.appRoot && isInside(descriptor.appRoot, moduleFile)) {
+    if (mode === 'pip' && descriptor.appRoot && isPathInside(descriptor.appRoot, moduleFile)) {
       return {
         ok: false,
         reason: `pip 模式命中了应用目录内的 snakeeats（${moduleFile}），疑似本地影子包；请使用已安装到 Python 环境的 snakeeats`,
