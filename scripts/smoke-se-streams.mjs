@@ -475,20 +475,30 @@ try {
   await page.waitForTimeout(250);
   await page.fill('.modal input[type="text"]', '现货套利复盘');
   await page.click('.dlg-actions .primary');
-  await page.waitForTimeout(700);
 
   let listA = [];
-  try {
-    listA = await seRpc('stream.list', {});
-  } catch (err) {
-    listA = [];
+  let created = null;
+  for (let i = 0; i < 50; i += 1) {
+    try {
+      listA = await seRpc('stream.list', {});
+    } catch (err) {
+      listA = [];
+    }
+    created = Array.isArray(listA) ? listA.find((s) => s && s.name === '现货套利复盘') : null;
+    if (created) break;
+    await page.waitForTimeout(300);
   }
-  const created = Array.isArray(listA) ? listA.find((s) => s && s.name === '现货套利复盘') : null;
   check('(a) SE stream.create 落库（name 一致）', !!created, JSON.stringify(created));
   check('(a) name 即中文显示名原样保真', !!created && created.name === '现货套利复盘', created && created.name);
-  check('(a) UI 流列表显示中文名', await page.evaluate(() =>
-    Array.from(document.querySelectorAll('.stream-name')).some((e) => e.textContent === '现货套利复盘')
-  ));
+  const uiCreated = await page
+    .waitForFunction(
+      () => Array.from(document.querySelectorAll('.stream-name')).some((e) => e.textContent === '现货套利复盘'),
+      null,
+      { timeout: 15000 }
+    )
+    .then(() => true)
+    .catch(() => false);
+  check('(a) UI 流列表显示中文名', uiCreated);
   const createdName = created ? created.name : null;
 
   // ── (a) UI 重命名 → SE stream.rename（级联；name 即标识）────────────────────
