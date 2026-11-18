@@ -158,7 +158,7 @@ async function main() {
     process.exit(1);
   }
 
-  // 既有 5 个真实-SE 脚本体内硬编码了过期默认值（C:\Python313\... / C:/Users/demo\...），
+  // 既有 5 个真实-SE 脚本体内硬编码了过期默认值（开发机 Python / 项目路径），
   // 它们只认 env 覆盖。preflight 已实证解析值可 import snakeeats，这里注入给子进程，
   // 避免「可用却全部 ENOENT」的假阴性；不修改脚本本体（Q4）。
   const childEnv = info.available ? { SE_PYTHON: info.python, SE_PACKAGE_PATH: info.packageParent } : {};

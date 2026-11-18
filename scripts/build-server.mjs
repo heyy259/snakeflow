@@ -1,8 +1,13 @@
 import { build } from 'esbuild';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 await build({
-  entryPoints: ['server/app/standalone.js'],
-  outfile: 'server.mjs',
+  absWorkingDir: appRoot,
+  entryPoints: [path.join(appRoot, 'server', 'app', 'standalone.js')],
+  outfile: path.join(appRoot, 'server.mjs'),
   bundle: true,
   platform: 'node',
   format: 'esm',

@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { portableDocPath, absolutizeDocPath } from '../src/se/paths.js';
 
-const ROOT = 'C:/Users/demo/OneDrive/programing/tools/reactflow';
+const ROOT = 'C:/workspace/reactflow';
 
 // 1) 项目内绝对路径 → 相对项目根。
 assert.equal(
@@ -20,7 +20,7 @@ assert.equal(
 // 3) 异机残留（同盘不同用户）→ 旧工作区迁移模式治愈为 graphs/<名>。
 assert.equal(
   portableDocPath(
-    'C:/Users/demo/OneDrive/programing/tools/reactflow/graphs/plan.se.json',
+    'C:/Users/example/projects/reactflow/graphs/plan.se.json',
     ROOT,
     { repairGraphsResidue: true }
   ),

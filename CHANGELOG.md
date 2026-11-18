@@ -4,6 +4,25 @@ All notable changes to SnakeFlow are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added a project Code of Conduct and a private GitHub Security Advisory
+  reporting path.
+
+### Fixed
+
+- Restored the tracked `server/se/runtime/` source modules used by the runtime
+  resolver, process supervisor, launcher, and integration tests.
+- Anchored runtime/build ignore rules to the repository root so source files
+  under nested `runtime/` directories are included.
+
+### Changed
+
+- Marked `start.command` and `start.sh` as executable in Git.
+- Replaced machine-specific paths in portability tests with neutral examples.
+
 ## [0.1.0] - 2026-11-16
 
 ### Added

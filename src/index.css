@@ -948,6 +948,8 @@ body,
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  user-select: none;
+  cursor: grab;
 }
 
 /* 内容：markdown 容器（排版见 .md-body），完整展示不截断，固定高度时由外层滚动 */
@@ -965,7 +967,6 @@ body,
 .react-flow__node .md-body,
 .react-flow__node .agent-console-text,
 .react-flow__node .term-log,
-.react-flow__node .agent-title,
 .react-flow__node .agent-field-key,
 .react-flow__node .agent-field-value {
   user-select: text;

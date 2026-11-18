@@ -21,12 +21,17 @@ a real authentication layer first.
 ## Reporting a vulnerability
 
 Please do not open a public issue for security reports. Contact the maintainers
-privately with:
+privately through the
+[GitHub Security Advisory form](https://github.com/heyy259/snakeflow/security/advisories/new)
+with:
 
 - affected SnakeFlow and SnakeEats versions;
 - operating system and Node/Python versions;
 - reproduction steps;
 - whether the issue requires local access, a malicious web page, or network access.
+
+If the advisory form is temporarily unavailable, use the private contact
+channel listed on the maintainer's [GitHub profile](https://github.com/heyy259).
 
 ## Data safety
 

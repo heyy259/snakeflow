@@ -381,6 +381,11 @@ async function nodeCssWidth(page, id) {
 
 /** 按住节点标题栏拖动（dx/dy 为屏幕像素）。正文区带 nodrag（只读文本可选），不可再从中心抓取。 */
 async function dragNodeBy(page, id, dx, dy) {
+  const fitView = page.locator('.react-flow__controls-fitview');
+  if (await fitView.count()) {
+    await fitView.first().click();
+    await page.waitForTimeout(300);
+  }
   const node = page.locator(`.react-flow__node[data-id="${id}"]`);
   const titleBox = await node.locator('.agent-title').boundingBox().catch(() => null);
   const box = titleBox || (await node.boundingBox());

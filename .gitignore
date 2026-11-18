@@ -84,11 +84,11 @@ graphs/*-DESKTOP-*
 # ---- 开源发行与本地运行 ----
 .DS_Store
 .ruff_cache/
-data/
-runtime/
-se-storage/
-logs/
+/data/
+/runtime/
+/se-storage/
+/logs/
 server.mjs
-release/
+/release/
 .playwright-mcp/
 docs/archive/
