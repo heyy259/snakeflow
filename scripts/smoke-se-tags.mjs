@@ -666,9 +666,14 @@ try {
     beforeG,
     { timeout: 20000 }
   );
-  await clickEye('本地可见流');
-  await page.waitForTimeout(500);
-  check('(g) 绑定：SE 隐藏生效', (await streamItemHidden('本地可见流')) === true);
+  check('(g) 绑定：找到隐藏按钮', await clickEye('本地可见流'));
+  let boundHidden = false;
+  for (let i = 0; i < 50; i += 1) {
+    boundHidden = (await streamItemHidden('本地可见流')) === true;
+    if (boundHidden) break;
+    await page.waitForTimeout(300);
+  }
+  check('(g) 绑定：SE 隐藏生效', boundHidden);
   check('(g) 绑定：SE 徽标出现', !!(await page.$('.se-badge')));
 
   const realErrors = pageErrors.filter((e) => !/favicon|React DevTools/i.test(e));
