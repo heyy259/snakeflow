@@ -6892,6 +6892,17 @@ function FlowApp({ restored, restoredFrom }) {
     persistableNodes,
   ]);
 
+  // 懒加载期间到达的 SE 变化会被 orchestrator 记为 dirty；tab ready 后补一次
+  // 真源重投影，避免仅因初始化时序丢失已持久化的派生边。
+  useEffect(() => {
+    if (!tabReady) return;
+    const sid = activeSystemIdRef.current ? String(activeSystemIdRef.current) : '';
+    if (!sid) return;
+    const client = sePool.get(sid);
+    if (!client || client.status !== SE_STATUS.ONLINE) return;
+    se.reproject(sid).catch(() => {});
+  }, [tabReady, activeId, se]);
+
   const confirmDialog = useCallback(async () => {
     setDlgBusy(true);
     try {

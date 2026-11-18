@@ -712,6 +712,8 @@ export function createSeOrchestrator(getPort) {
     // 新增：等待 tab 就绪（确保 layoutRef 已初始化）
     if (port().isTabReady && !port().isTabReady()) {
       console.warn(`Tab 未就绪，跳过重投影（sid: ${sid}）`);
+      // 不丢弃这次真源变化：App 在 tab ready 后会补一次 reproject。
+      coordinator.markDirty(sid, 'tab-not-ready');
       return false;
     }
     // R2：重投影失败即清除本系统的悬空边状态，防陈旧「发现 N 条悬空边」横幅残留。
