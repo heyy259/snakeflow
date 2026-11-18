@@ -182,6 +182,15 @@ try {
   };
   const waitOffline = (timeout = 20000) =>
     page.waitForFunction(() => !!document.querySelector('.flow.flow-offline'), null, { timeout }).then(() => true).catch(() => false);
+  const waitAutosaved = (timeout = 30000) =>
+    page
+      .waitForFunction(
+        () => /已自动保存/.test(document.querySelector('.status-msg')?.textContent || ''),
+        null,
+        { timeout }
+      )
+      .then(() => true)
+      .catch(() => false);
   const waitForTag = async (name, key, timeout = 25000) => {
     const t0 = Date.now();
     while (Date.now() - t0 < timeout) {
@@ -284,10 +293,13 @@ try {
   check('运行时边对齐：SE 甲.tags[edge.乙] 存在', Object.prototype.hasOwnProperty.call(tags甲_post, 'edge.乙'), JSON.stringify(tags甲_post));
   check('运行时边对齐：标签值传递（对齐标签）', String(tags甲_post['edge.乙']) === '对齐标签', JSON.stringify(tags甲_post['edge.乙']));
 
-  // 幂等：再次 reload 不重复/不报错，边仍在。
+  // 幂等：等首轮结构/文档写入稳定后再次 reload，不重复/不报错，边仍在。
+  check('幂等：首轮加载已自动保存', await waitAutosaved());
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForSelector('.react-flow', { timeout: 15000 });
   await waitOnline();
+  check('幂等：二次加载后 s-甲 节点在', await hasNode('s-甲', 30000));
+  check('幂等：二次加载后 s-乙 节点在', await hasNode('s-乙', 30000));
   check('幂等：二次加载后派生边仍在', await ensureEdge('se-e-甲__乙', 30000));
   const meta甲_idem = await seCall('stream.get_metadata', { name: '甲' }).catch(() => null);
   check('幂等：edge.乙 值未变', String(((meta甲_idem && meta甲_idem.tags) || {})['edge.乙']) === '对齐标签');
