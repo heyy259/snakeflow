@@ -109,6 +109,7 @@ import {
   derivePromoteName,
   collectTakenNames,
   rewriteEdgesForIdSwap,
+  mergePromotedNode,
   incidentEdgeTagOps,
 } from './se/promote.js';
 import {
@@ -5459,18 +5460,16 @@ function FlowApp({ restored, restoredFrom }) {
       // ④ 成功后换身份：node id + data.name + contentState；re-key 缓存（pending 无旧 name，no-op）；
       // 改写本地边端点。
       const newId = streamNodeId(name);
-      const migrated = nodesRef.current.map((n) =>
-        String(n.id) === oldId
-          ? {
-              ...n,
-              id: newId,
-              data: {
-                ...(n.data || {}),
-                name,
-                ...(initialized ? { contentState: 'loaded' } : {}),
-              },
-            }
-          : n
+      // stream.create 会触发重投影，s-<name> 可能已经先落地；合并而不是替换可避免
+      // 同一 id 短暂出现两颗节点（React Flow 会报 duplicate key）。
+      const migrated = mergePromotedNode(
+        nodesRef.current,
+        oldId,
+        newId,
+        {
+          name,
+          ...(initialized ? { contentState: 'loaded' } : {}),
+        }
       );
       applyNodes(migrated);
       rekeyStreamCaches(sid, null, name);

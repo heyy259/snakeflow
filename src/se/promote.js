@@ -92,6 +92,56 @@ export function rewriteEdgesForIdSwap(edges, oldId, newId) {
 }
 
 /**
+ * 换节点 id，并把已经由并发重投影落地的新 id 合并成唯一节点。
+ *
+ * 创建流会触发 stream.on_change，重投影可能先于 promote 的本地换 id 落地：
+ * 此时画布同时存在 `n-*` 草稿与 `s-<name>` 投影。若再机械替换旧 id，就会产生
+ * 两颗同 id 节点并触发 React 重复 key 警告。这里以新 id 的原位置为准，保留旧
+ * 草稿的顺序；无旧节点时返回原数组，保证重复调用幂等。
+ *
+ * @param {Array} nodes 画布节点
+ * @param {string} oldId pending 节点 id
+ * @param {string} newId SE 流节点 id
+ * @param {object} [dataPatch] 提升成功后要覆盖的数据
+ * @returns {Array} 节点 id 唯一的新数组；无需替换时原样返回
+ */
+export function mergePromotedNode(nodes, oldId, newId, dataPatch = {}) {
+  const list = Array.isArray(nodes) ? nodes : [];
+  const from = String(oldId);
+  const to = String(newId);
+  const pending = list.find((n) => n && String(n.id) === from);
+  if (!pending) return list;
+  const projected = list.find((n) => n && String(n.id) === to);
+  const merged = {
+    // 投影可能先落地，但本地草稿仍是最新交互态；保留其坐标/尺寸/选中态，
+    // 同时继承投影独有的运行时字段（如 fresh/measured）。
+    ...(projected || {}),
+    ...pending,
+    id: to,
+    data: {
+      ...((projected && projected.data) || {}),
+      ...(pending.data || {}),
+      ...(dataPatch && typeof dataPatch === 'object' ? dataPatch : {}),
+    },
+  };
+  const out = [];
+  let inserted = false;
+  for (const node of list) {
+    if (!node) continue;
+    const id = String(node.id);
+    if (id === from || id === to) {
+      if (!inserted) {
+        out.push(merged);
+        inserted = true;
+      }
+      continue;
+    }
+    out.push(node);
+  }
+  return out;
+}
+
+/**
  * 计算与刚提升节点相关的边标签写操作（换 id + 重投影之间调用）。
  *
  * 规则（边 = source 流的 `edge.<目标 name>` 标签）：

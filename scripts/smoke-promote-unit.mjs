@@ -8,6 +8,7 @@ import {
   collectTakenNames,
   derivePromoteName,
   rewriteEdgesForIdSwap,
+  mergePromotedNode,
   incidentEdgeTagOps,
 } from '../src/se/promote.js';
 
@@ -84,6 +85,29 @@ assert.equal(displayNameOf({ data: {} }), '');
   // 无命中时返回同一引用（避免无谓 setEdges）
   const same = rewriteEdgesForIdSwap([{ id: 'e-9', source: 's-x', target: 's-y' }], 'n-a', 's-A');
   assert.equal(same, same); // 数组本身不因命中以外的边改变语义
+}
+
+// ── 换节点 id：并发重投影先落地新 id 时合并为唯一节点 ──
+{
+  const nodes = [
+    { id: 's-before', position: { x: 1, y: 2 }, data: { name: 'before' } },
+    { id: 'n-1', position: { x: 10, y: 20 }, data: { name: '新节点', content: '草稿' } },
+    { id: 's-新节点', position: { x: 30, y: 40 }, data: { contentState: 'unknown', fresh: true } },
+    { id: 's-after', data: { name: 'after' } },
+  ];
+  const out = mergePromotedNode(nodes, 'n-1', 's-新节点', {
+    name: '新节点',
+    contentState: 'loaded',
+  });
+  assert.deepEqual(out.map((n) => n.id), ['s-before', 's-新节点', 's-after']);
+  assert.deepEqual(out[1].position, { x: 10, y: 20 });
+  assert.equal(out[1].data.content, '草稿');
+  assert.equal(out[1].data.fresh, true);
+  assert.equal(out[1].data.contentState, 'loaded');
+  assert.equal(nodes[1].id, 'n-1'); // 输入不被修改
+
+  // 已无旧 id 时幂等；不产生无意义的新数组。
+  assert.equal(mergePromotedNode(out, 'n-1', 's-新节点', { name: '新节点' }), out);
 }
 
 // ── 边标签生成（换 id 后调用） ──
