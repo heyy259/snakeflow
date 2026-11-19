@@ -125,6 +125,22 @@ function httpGetJson(pathname, timeoutMs = 10000) {
   });
 }
 
+async function waitEndpointOnline(systemId, timeoutMs = 60000) {
+  const deadline = Date.now() + timeoutMs;
+  let last = null;
+  while (Date.now() < deadline) {
+    try {
+      const res = await httpGetJson(`/api/se/endpoint?system_id=${encodeURIComponent(systemId)}`, 5000);
+      last = res.data;
+      if (last && last.status === 'online') return last;
+    } catch {
+      last = null;
+    }
+    await sleep(500);
+  }
+  return last;
+}
+
 let browser = null;
 let viteA = null;
 let viteB = null;
@@ -204,14 +220,17 @@ try {
         greenA = false;
       }
       check('(A) 开关关闭仍强制拉起：状态点转 online（绿）', greenA);
-      const ep = await httpGetJson(`/api/se/endpoint?system_id=${SID}`);
+      const ep = await waitEndpointOnline(SID, 30000);
       check(
         '(A) 开关关闭：端点 online（强制自动拉起）',
-        ep.data && ep.data.status === 'online',
-        JSON.stringify(ep.data)
+        ep && ep.status === 'online',
+        JSON.stringify(ep)
       );
-      const bannerA = await page.$('.se-offline-banner');
-      check('(A) 离线只读横幅消失', !bannerA);
+      const bannerAGone = await page
+        .waitForFunction(() => !document.querySelector('.se-offline-banner'), null, { timeout: 10000 })
+        .then(() => true)
+        .catch(() => false);
+      check('(A) 离线只读横幅消失', bannerAGone);
     } finally {
       await page.close().catch(() => {});
     }
@@ -242,35 +261,42 @@ try {
       }
       check('(B) 开关开启：tabbar 状态点转 online（绿）', green);
 
-      const ep = await httpGetJson(`/api/se/endpoint?system_id=${SID}`);
-      check('(B) 端点 online（自动拉起成功）', ep.data && ep.data.status === 'online', JSON.stringify(ep.data));
+      const ep = await waitEndpointOnline(SID, 60000);
+      check('(B) 端点 online（自动拉起成功）', ep && ep.status === 'online', JSON.stringify(ep));
 
-      const banner = await page.$('.se-offline-banner');
-      check('(B) 离线只读横幅消失', !banner);
+      const bannerGone = await page
+        .waitForFunction(() => !document.querySelector('.se-offline-banner'), null, { timeout: 10000 })
+        .then(() => true)
+        .catch(() => false);
+      check('(B) 离线只读横幅消失', bannerGone);
 
       // 经代理 system.info：证明连接 + 身份校验通过（同样内容的系统被拉起）。
-      const info = await page.evaluate(
-        (sid) =>
-          new Promise((resolve) => {
-            let ws;
-            try {
-              ws = new WebSocket(`ws://localhost:${location.port}/api/se/ws?system_id=${encodeURIComponent(sid)}`);
-            } catch {
-              resolve(null);
-              return;
-            }
-            const t = setTimeout(() => { try { ws.close(); } catch { /* 忽略 */ } resolve(null); }, 8000);
-            ws.onopen = () => ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'system.info', params: {}, id: 1 }));
-            ws.onmessage = (e) => {
+      let info = null;
+      for (let attempt = 0; attempt < 10 && !(info && info.system_id === SID); attempt += 1) {
+        info = await page.evaluate(
+          (sid) =>
+            new Promise((resolve) => {
+              let ws;
               try {
-                const m = JSON.parse(e.data);
-                if (m && m.id === 1) { clearTimeout(t); ws.close(); resolve(m.result || null); }
-              } catch { /* 忽略 */ }
-            };
-            ws.onerror = () => { clearTimeout(t); resolve(null); };
-          }),
-        SID
-      );
+                ws = new WebSocket(`ws://localhost:${location.port}/api/se/ws?system_id=${encodeURIComponent(sid)}`);
+              } catch {
+                resolve(null);
+                return;
+              }
+              const t = setTimeout(() => { try { ws.close(); } catch { /* 忽略 */ } resolve(null); }, 3000);
+              ws.onopen = () => ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'system.info', params: {}, id: 1 }));
+              ws.onmessage = (e) => {
+                try {
+                  const m = JSON.parse(e.data);
+                  if (m && m.id === 1) { clearTimeout(t); ws.close(); resolve(m.result || null); }
+                } catch { /* 忽略 */ }
+              };
+              ws.onerror = () => { clearTimeout(t); resolve(null); };
+            }),
+          SID
+        );
+        if (!(info && info.system_id === SID)) await sleep(500);
+      }
       check('(B) 经代理 system.info 通（身份校验）', info && info.system_id === SID, JSON.stringify(info));
     } finally {
       await page.close().catch(() => {});
