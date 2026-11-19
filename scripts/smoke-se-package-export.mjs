@@ -12,7 +12,7 @@
 //      tags（canvas + edge.<目标>）/工具（tool_path 真实存在，否则 SE 静默剔除）。
 //
 // 环境（本机实测）：anaconda Python 3.12 + SE 包父目录（含 snakeeats 子目录）——
-//   $env:SE_PACKAGE_PATH='C:/Users/demo\OneDrive\programing\MAX\heyy259\改造中的副本'
+//   $env:SE_PACKAGE_PATH='<SnakeEats 源码父目录>'
 //   node scripts/smoke-se-package-export.mjs
 // helper 的本机候选目录通常已能自动解析出同一路径，SE_PACKAGE_PATH 仅作显式覆盖；
 // 解释器同理可经 SE_PYTHON 覆盖。端口一律 `--port 0` + registry 发现（不占固定端口）。

@@ -22,6 +22,8 @@ All notable changes to SnakeFlow are documented here. The format follows
 
 - Marked `start.command` and `start.sh` as executable in Git.
 - Replaced machine-specific paths in portability tests with neutral examples.
+- Normalized public author metadata to the project's GitHub identity and
+  removed machine-specific paths from the public Git history.
 
 ## [0.1.0] - 2026-11-16
 
